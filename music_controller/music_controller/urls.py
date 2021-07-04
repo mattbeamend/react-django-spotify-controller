@@ -19,6 +19,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls), # if admin path, direct to admin.site.urls
     path('api/', include('api.urls')), # if api path, direct to api.urls
-    path('', include('frontend.urls')) # if any other path, direct to frontend.urls
-
+    path('', include('frontend.urls')), # if any other path, direct to frontend.urls
+    path('spotify/', include('spotify.urls')), # if spotify API path, direct to spotfy urls
 ]

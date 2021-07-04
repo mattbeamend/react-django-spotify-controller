@@ -13,13 +13,15 @@ export default class Room extends Component {
             guestCanPause: false,
             isHost: false,
             showSettings: false,
+            spotifyAuthenticated: false,
         };
         this.roomCode = this.props.match.params.roomCode;
-        this.leaveButtonPressed = this.leaveButtonPressed.bind(this)
-        this.updateShowSettings = this.updateShowSettings.bind(this)
-        this.renderSettingsButton = this.renderSettingsButton.bind(this)
-        this.renderSettings = this.renderSettings.bind(this)
+        this.leaveButtonPressed = this.leaveButtonPressed.bind(this);
+        this.updateShowSettings = this.updateShowSettings.bind(this);
+        this.renderSettingsButton = this.renderSettingsButton.bind(this);
+        this.renderSettings = this.renderSettings.bind(this);
         this.getRoomDetails = this.getRoomDetails.bind(this);
+        this.authenticateSpotify = this.authenticateSpotify.bind(this);
         this.getRoomDetails();
     }
 
@@ -39,8 +41,29 @@ export default class Room extends Component {
               guestCanPause: data.guest_can_pause,
               isHost: data.is_host,
             });
+            if (this.state.isHost) {
+                this.authenticateSpotify();
+            }
           });
-      }
+    }
+
+    // Send request to Spotify API backend asking if the user is authenticated.
+    // But only when the user is a host.
+    authenticateSpotify() {
+        fetch("/spotify/is-authenticated")
+          .then((response) => response.json())
+          .then((data) => {
+            this.setState({ spotifyAuthenticated: data.status });
+            console.log(data.status);
+            if (!data.status) {
+              fetch("/spotify/get-auth-url")
+                .then((response) => response.json())
+                .then((data) => {
+                  window.location.replace(data.url);
+                });
+            }
+          });
+    }
 
     // When leave room button is pressed send a request to backend to remove room code
     // from users session, and check if users leaving is the host in which case delete 

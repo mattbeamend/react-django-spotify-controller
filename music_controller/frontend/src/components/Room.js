@@ -1,9 +1,8 @@
-import { FormHelperText } from "@material-ui/core";
 import React, { Component } from "react";
 import { Grid, Button, Typography } from "@material-ui/core";
 import CreateRoomPage from "./CreateRoomPage";
+import MusicPlayer from "./MusicPlayer";
 
-// Creating the Room page component, constructor defines the default values
 export default class Room extends Component {
   constructor(props) {
     super(props);
@@ -13,6 +12,7 @@ export default class Room extends Component {
       isHost: false,
       showSettings: false,
       spotifyAuthenticated: false,
+      song: {},
     };
     this.roomCode = this.props.match.params.roomCode;
     this.leaveButtonPressed = this.leaveButtonPressed.bind(this);
@@ -21,10 +21,18 @@ export default class Room extends Component {
     this.renderSettings = this.renderSettings.bind(this);
     this.getRoomDetails = this.getRoomDetails.bind(this);
     this.authenticateSpotify = this.authenticateSpotify.bind(this);
+    this.getCurrentSong = this.getCurrentSong.bind(this);
     this.getRoomDetails();
   }
 
-  // Request the Room details from getRoom view object using the room code specified.
+  componentDidMount() {
+    this.interval = setInterval(this.getCurrentSong, 1000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.interval);
+  }
+
   getRoomDetails() {
     return fetch("/api/get-room" + "?code=" + this.roomCode)
       .then((response) => {
@@ -46,8 +54,6 @@ export default class Room extends Component {
       });
   }
 
-  // Send request to Spotify API backend asking if the user is authenticated.
-  // But only when the user is a host.
   authenticateSpotify() {
     fetch("/spotify/is-authenticated")
       .then((response) => response.json())
@@ -64,13 +70,25 @@ export default class Room extends Component {
       });
   }
 
-  // When leave room button is pressed send a request to backend to remove room code
-  // from users session, and check if users leaving is the host in which case delete
-  // the room from database.Then redirect user back to the home page.
+  getCurrentSong() {
+    fetch("/spotify/current-song")
+      .then((response) => {
+        if (!response.ok) {
+          return {};
+        } else {
+          return response.json();
+        }
+      })
+      .then((data) => {
+        this.setState({ song: data });
+        console.log(data);
+      });
+  }
+
   leaveButtonPressed() {
     const requestOptions = {
       method: "POST",
-      headers: { "Content-Type": "applications/json" },
+      headers: { "Content-Type": "application/json" },
     };
     fetch("/api/leave-room", requestOptions).then((_response) => {
       this.props.leaveRoomCallback();
@@ -78,16 +96,12 @@ export default class Room extends Component {
     });
   }
 
-  // Used to handle whether the settings must be shown or not
-  // This will depend on whether the settings button has been clicked
   updateShowSettings(value) {
     this.setState({
       showSettings: value,
     });
   }
 
-  // The build code for the room settings page
-  // Import and use the CreateRoomPage component as the template for updating a rooms
   renderSettings() {
     return (
       <Grid container spacing={1}>
@@ -113,9 +127,6 @@ export default class Room extends Component {
     );
   }
 
-  // Render the settings button seperate to the main build code
-  // This allows us to enable/disable the user from accessing the settings
-  // depending on whether their a host or not.
   renderSettingsButton() {
     return (
       <Grid item xs={12} align="center">
@@ -130,8 +141,6 @@ export default class Room extends Component {
     );
   }
 
-  // The build code for the Room page.
-  // If showSettings is true then render settings page instead of room page.
   render() {
     if (this.state.showSettings) {
       return this.renderSettings();
@@ -143,21 +152,7 @@ export default class Room extends Component {
             Code: {this.roomCode}
           </Typography>
         </Grid>
-        <Grid item xs={12} align="center">
-          <Typography variant="h6" component="h6">
-            Votes: {this.state.votesToSkip}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} align="center">
-          <Typography variant="h6" component="h6">
-            Guest can Pause: {this.state.guestCanPause.toString()}
-          </Typography>
-        </Grid>
-        <Grid item xs={12} align="center">
-          <Typography variant="h6" component="h6">
-            Host: {this.state.isHost.toString()}
-          </Typography>
-        </Grid>
+        <MusicPlayer {...this.state.song} />
         {this.state.isHost ? this.renderSettingsButton() : null}
         <Grid item xs={12} align="center">
           <Button
